@@ -1,5 +1,4 @@
-use std::error::Error;
-use std::fs;
+use std::{env, error::Error, fs};
 
 #[cfg(test)]
 mod tests {
@@ -47,9 +46,11 @@ impl Config {
         }
         let query = &args[1];
         let filename = &args[2];
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
         Ok(Config {
             query: query.clone(),
             filename: filename.clone(),
+            case_sensitive,
         })
     }
 }
@@ -57,8 +58,14 @@ impl Config {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.filename)?;
 
-    for line in search(&config.query, &contents) {
-        println!("{}", line);
+    let result = if config.case_sensitive {
+        search(&config.query, &contents)
+    } else {
+        search_case_insensitive(&config.query, &contents)
+    };
+
+    for line in result {
+        eprintln!("{}", line);
     }
     Ok(())
 }
@@ -82,6 +89,5 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
             results.push(line);
         }
     }
-    dbg!(&results);
     results
 }
